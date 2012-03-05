@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import io
 import os
 import struct
 from os import path
@@ -26,7 +25,7 @@ class DictProvider (object):
     def LastModified (self):
         return os.stat (self.index_file).st_mtime
 
-    def DescEnumerate (self):
+    def __iter__ (self):
         """Enumerate over all available word, descriptor pairs"""
         desc_struct = struct.Struct ('!2I')
         with open (self.index_file, 'rb', self.buffer_size) as index_stream:

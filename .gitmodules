@@ -1,0 +1,3 @@
+[submodule "MaggotDict/udb"]
+	path = MaggotDict/udb
+	url = git@github.com:aslpavel/udb.git
