@@ -8,8 +8,9 @@ from collections import Mapping
 from . import providers
 from . import xdg
 from .utils import *
-from .udb import *
-from .udb.bptree import *
+
+from .pretzel.udb import *
+from .pretzel.udb.bptree import *
 
 CELL_INDEX = 0
 CELL_CONFIG = 1
