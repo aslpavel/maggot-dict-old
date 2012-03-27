@@ -7,10 +7,13 @@ from collections import Mapping
 # local
 from . import providers
 from . import xdg
-from .utils import *
 
+# pretzel
+from .pretzel.log import *
+from .pretzel.config import *
 from .pretzel.udb import *
 from .pretzel.udb.bptree import *
+from .pretzel.disposable import *
 
 CELL_INDEX = 0
 CELL_CONFIG = 1
@@ -20,7 +23,12 @@ __all__ = ('Dictionary',)
 # Dictionary                                                                   #
 #------------------------------------------------------------------------------#
 class Dictionary (Mapping):
-    def __init__ (self, storage_file = None):
+    def __init__ (self, storage_file = None, logger = None):
+        # init logger
+        self.log = Log ('dictionary')
+        if logger is not None:
+            self.log.Subscribe (logger)
+
         self.disposable = CompositeDisposable ()
 
         # open storage
@@ -30,49 +38,45 @@ class Dictionary (Mapping):
         self.disposable += self.storage
 
         # open config
-        config = self.storage.Cell [CELL_CONFIG]
-        if config is None:
-            config = {
-                'dict_path' : [path.join (xdg.xdg_data_home, 'maggot-dict')],
-                'last_uid' : 0,
-                'providers' : {}, # name -> uid, last_modified
-            }
-            self.storage.Cell [CELL_CONFIG] = json.dumps (config).encode ('utf-8')
-        else:
-            config = json.loads (config.decode ('utf-8'))
-        self.config = config
+        self.config = SackConfig (self.storage, CELL_CONFIG, lambda: {
+            'dict_path' : [path.join (xdg.xdg_data_home, 'maggot-dict')],
+            'last_uid' : 0,
+            'providers' : {}, # name -> uid, last_modified
+        })
 
         # open index
-        self.index = BPTree (PickleProvider (self.storage, order = 256, cell = CELL_INDEX))
+        self.index = BPTree (SackProvider (self.storage, order = 256, type = 'PP', cell = CELL_INDEX))
 
         # discover providers
         self.providers = {}
         updated = False
         for provider_type in providers.All:
-            for dict_path in config ['dict_path']:
+            for dict_path in self.config.dict_path:
                 for provider in provider_type.Discover (dict_path):
                     self.disposable += provider
-                    info = config ['providers'].get (provider.Name)
+                    info = getattr (self.config.providers, provider.Name, None)
                     if info is None:
-                        sys.stderr.write (':: indexing \'{}\'\n'.format (provider.Name))
-
                         # allocate uid
-                        uid = config ['last_uid']; config ['last_uid'] += 1
+                        uid, self.config.last_uid = self.config.last_uid, self.config.last_uid + 1
                         self.providers [uid] = provider
 
                         # build index
                         count = 0
-                        for word, desc in provider:
-                            count += 1
-                            record = self.index.get (word)
-                            if record is None:
-                                record = []
-                            record.append ((uid, desc))
-                            self.index [word] = record
-                        self.index.provider.Flush ()
+                        with self.log.Progress (provider.Name) as progress:
+                            progress ('0')
+                            for word, desc in provider:
+                                count += 1
+                                if count % 100 == 0:
+                                    progress (str (count))
+                                record = self.index.get (word)
+                                if record is None:
+                                    record = []
+                                record.append ((uid, desc))
+                                self.index [word] = record
+                            self.index.provider.Flush ()
 
                         # update config
-                        config ['providers'] [provider.Name] = (uid, provider.LastModified)
+                        setattr (self.config.providers, provider.Name, [uid, provider.LastModified])
                         updated = True
                     else:
                         uid, last_modified = info
@@ -82,7 +86,7 @@ class Dictionary (Mapping):
                         else:
                             self.providers [uid] = provider
         if updated:
-            self.storage.Cell [CELL_CONFIG] = json.dumps (config).encode ('utf-8')
+            self.config.Flush ()
 
     #--------------------------------------------------------------------------#
     # Mapping Interface                                                        #

@@ -4,18 +4,20 @@ import sys
 from os import path
 
 from MaggotDict import *
+from MaggotDict.pretzel.log import *
 
 def main ():
     if len (sys.argv) < 2:
         sys.stderr.write ('Usage: {} <word>\n'.format (path.basename (sys.argv [0]))) 
         sys.exit (1)
 
-    with Dictionary () as dictionary:
-        for name, data in dictionary [sys.argv [1].encode ('utf-8')]:
-            sys.stdout.write (name.center (80, '-'))
-            sys.stdout.write ('\n')
-            sys.stdout.write (data.decode ('utf-8'))
-            sys.stdout.write ('\n')
+    with LoggerCreate () as logger:
+        with Dictionary (logger = logger) as dictionary:
+            for name, data in dictionary [sys.argv [1].encode ('utf-8')]:
+                sys.stdout.write (name.center (80, '-'))
+                sys.stdout.write ('\n')
+                sys.stdout.write (data.decode ('utf-8'))
+                sys.stdout.write ('\n')
 
 if __name__ == '__main__':
     main ()
