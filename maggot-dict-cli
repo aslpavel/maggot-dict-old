@@ -4,21 +4,24 @@ import sys
 from os import path
 
 from MaggotDict import *
-from MaggotDict.pretzel.log import *
+from MaggotDict.pretzel.app import *
 
-def main ():
+def Main (app):
     if len (sys.argv) < 2:
         sys.stderr.write ('Usage: {} <word>\n'.format (path.basename (sys.argv [0]))) 
         sys.exit (1)
 
-    with LoggerCreate () as logger:
-        with Dictionary (logger = logger) as dictionary:
-            for name, data in dictionary [sys.argv [1].encode ('utf-8')]:
-                sys.stdout.write (name.center (80, '-'))
-                sys.stdout.write ('\n')
-                sys.stdout.write (data.decode ('utf-8'))
-                sys.stdout.write ('\n')
-
+    console = Console (sys.stdout)
+    with Dictionary (logger = app.Logger) as dictionary:
+        word = ' '.join (sys.argv [1:])
+        try:
+            for name, entry in dictionary [word]:
+                console.Write ('[{}]\n'.format (' {} '.format (name).center (78, '\u2015')))
+                entry.ToConsole (console)
+                console.Write ('\n')
+        except KeyError:
+            app.Log.Error ('word "{}" was not found'.format (word))
+            
 if __name__ == '__main__':
-    main ()
+    Application (Main, 'maggot-dict-cli', console = False)
 # vim: nu ft=python columns=120 :

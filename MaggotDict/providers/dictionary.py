@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import struct
+import codecs
 from os import path
 
 __all__ = ('DictProvider',)
@@ -13,10 +14,15 @@ class DictProvider (object):
     buffer_size  = 1 << 16 # 64KB
 
     def __init__ (self, data_file, index_file):
+        self.decode = codecs.getdecoder ('utf-8')
+
         self.data_file, self.index_file = data_file, index_file
         self.name = path.basename (self.data_file [:-len (self.data_suffix)])
         self.data_stream = open (data_file, 'rb', self.buffer_size)
 
+    #--------------------------------------------------------------------------#
+    # Properties                                                               #
+    #--------------------------------------------------------------------------#
     @property
     def Name (self):
         return self.name
@@ -25,6 +31,9 @@ class DictProvider (object):
     def LastModified (self):
         return os.stat (self.index_file).st_mtime
 
+    #--------------------------------------------------------------------------#
+    # Provier                                                                  #
+    #--------------------------------------------------------------------------#
     def __iter__ (self):
         """Enumerate over all available word, descriptor pairs"""
         desc_struct = struct.Struct ('!2I')
@@ -44,32 +53,33 @@ class DictProvider (object):
                     if end < 0:
                         break
                     word = data [start:end]
-                    start = end + desc_struct.size + 1
-                    if start > len (data):
+                    new_start = end + desc_struct.size + 1
+                    if new_start > len (data):
                         break
+                    start = new_start
                     desc = desc_struct.unpack (data [end + 1:start])
-                    yield word, desc
+                    yield self.decode (word) [0], desc
 
                 # copy tail
                 data = data [start:]
                     
     def __getitem__ (self, desc):
-        """Get data by it's descriptor"""
+        """Get entry by it's descriptor"""
         offset, size = desc
         self.data_stream.seek (offset)
-        return self.data_stream.read (size)
+        return DictEntry (self.decode (self.data_stream.read (size)) [0])
 
     #--------------------------------------------------------------------------#
-    # Context                                                                  #
+    # Dispose                                                                  #
     #--------------------------------------------------------------------------#
-    def Close (self):
+    def Dispose (self):
         self.data_stream.close ()
 
     def __enter__ (self):
         return self
 
     def __exit__ (self, et, eo, tb):
-        self.Close ()
+        self.Dispose ()
         return False
 
     #--------------------------------------------------------------------------#
@@ -95,4 +105,19 @@ class DictProvider (object):
             for data, index in find_dict (root, os.listdir (root)):
                 yield cls (data, index)
                    
+#------------------------------------------------------------------------------#
+# Entry                                                                        #
+#------------------------------------------------------------------------------#
+class DictEntry (object):
+    __slots__ = ('data',)
+
+    def __init__ (self, data):
+        self.data = data
+
+    #--------------------------------------------------------------------------#
+    # Console                                                                  #
+    #--------------------------------------------------------------------------#
+    def ToConsole (self, console):
+        console.Write (self.data)
+
 # vim: nu ft=python columns=120 :

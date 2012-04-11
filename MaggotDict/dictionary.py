@@ -45,7 +45,8 @@ class Dictionary (Mapping):
         })
 
         # open index
-        self.index = BPTree (SackProvider (self.storage, order = 256, type = 'PP', cell = CELL_INDEX))
+        self.index = BPTree (SackProvider (self.storage, order = 256, type = 'PP', cell = CELL_INDEX,
+            flags = SackProvider.FLAG_COMPRESSION))
 
         # discover providers
         self.providers = {}
@@ -66,7 +67,7 @@ class Dictionary (Mapping):
                             progress ('0')
                             for word, desc in provider:
                                 count += 1
-                                if count % 100 == 0:
+                                if not count % 100:
                                     progress (str (count))
                                 record = self.index.get (word)
                                 if record is None:
@@ -104,16 +105,16 @@ class Dictionary (Mapping):
             return Entry (self, word, self.index [word])
 
     #--------------------------------------------------------------------------#
-    # Context                                                                  #
+    # Dispose                                                                  #
     #--------------------------------------------------------------------------#
-    def Close (self):
+    def Dispose (self):
         self.disposable.Dispose ()
 
     def __enter__ (self):
         return self
 
     def __exit__ (self, et, eo, tb):
-        self.Close ()
+        self.Dispose ()
         return False
 
 #------------------------------------------------------------------------------#
