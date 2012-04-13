@@ -16,12 +16,12 @@ def Main (app):
         word = ' '.join (sys.argv [1:])
         try:
             for name, entry in dictionary [word]:
-                console.Write ('[{}]\n'.format (' {} '.format (name).center (78, '\u2015')))
+                console.Write ('[{}]\n'.format (' {} '.format (name).center (78, '='))) # '\u2015'
                 entry.ToConsole (console)
                 console.Write ('\n')
         except KeyError:
             app.Log.Error ('word "{}" was not found'.format (word))
             
 if __name__ == '__main__':
-    Application (Main, 'maggot-dict-cli', console = False)
+    Application (Main, 'maggot-dict-cli', console = True)
 # vim: nu ft=python columns=120 :

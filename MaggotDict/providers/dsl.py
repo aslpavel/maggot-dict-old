@@ -151,8 +151,9 @@ class DslProvider (object):
 #------------------------------------------------------------------------------#
 class DslEntry (object):
     __slots__ = ('root',)
-    tag_pattern    = re.compile (r'(?<!\\)\[(/)?([^\]]+)\]')   # tag
-    indent_pattern = re.compile (r'\r?\n\s*', re.MULTILINE) # new line with offset
+    tag_pattern    = re.compile (r'(?<!\\)\[(/)?([^\]]+)\]') # tag
+    indent_pattern = re.compile (r'\r?\n\s*', re.MULTILINE)  # new line with offset
+    escape_pattern = re.compile (r'\\(.)')                   # escape
 
     def __init__ (self, data):
         self.root = DslNode (None)
@@ -167,7 +168,7 @@ class DslEntry (object):
 
             # text
             if offset < match.start ():
-                node.children.append ((False, data [offset:match.start ()]))
+                node.children.append ((False, self.escape_pattern.sub (r'\1', data [offset:match.start ()])))
             offset = match.end ()
 
             # node
@@ -196,9 +197,9 @@ class DslEntry (object):
         # tail
         if match:
             if match.end () < len (data):
-                stack [-1].children.append ((False, data [match.end ():]))
+                stack [-1].children.append ((False,  self.escape_pattern.sub (r'\1', data [match.end ():])))
         else:
-            stack [-1].children.append ((False, data))
+            stack [-1].children.append ((False,  self.escape_pattern.sub (r'\1', data)))
 
     #--------------------------------------------------------------------------#
     # Console                                                                  #
@@ -262,7 +263,8 @@ class DslNode (object):
 # Transcription                                                                #
 #------------------------------------------------------------------------------#
 transcription_map = {
-    0x0027: b"'",                        # '
+    0x0020: b" ",                        # space
+    0x0027: b'\'',                       # '
     0x0028: b'(',                        # (
     0x0029: b')',                        # )
     0x002c: b',',                        # ,
@@ -376,6 +378,7 @@ transcription_map = {
     0x035f: b'\xcd\x9f',                 # combining double macron below
     0x03b8: b'\xce\xb8',                 # θ
     0x0402: b'i\xcb\x90',                # iː
+    0x0403: b'\xc9\x91\xcb\x90',         # ɑː
     0x0404: b'z',                        # z
     0x0405: b'\xc5\x93\xcc\x83',         # œ̃
     0x0406: b'h',                        # h
