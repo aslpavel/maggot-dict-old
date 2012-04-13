@@ -6,6 +6,8 @@ import codecs
 import itertools
 from os import path
 
+from ..console import *
+
 __all__ = ('DslProvider',)
 #------------------------------------------------------------------------------#
 # Lingvo DSL Provider                                                          #
@@ -200,13 +202,21 @@ class DslEntry (object):
     #--------------------------------------------------------------------------#
     # Console                                                                  #
     #--------------------------------------------------------------------------#
-    def ToConsole (self, console):
+    colors = {
+        'trn' : (COLOR_DEFAULT, COLOR_NONE, ATTR_NONE),              # translation
+        '*'   : (COLOR_BLACK,   COLOR_NONE, ATTR_BOLD),              # secondary
+        'b'   : (COLOR_MAGENTA, COLOR_NONE, ATTR_BOLD | ATTR_FORCE), # bold
+        'p'   : (COLOR_GREEN,   COLOR_NONE, ATTR_FORCE),             # part
+        'i'   : (COLOR_NONE,    COLOR_NONE, ATTR_ITALIC),            # italic
+        'ref' : (COLOR_MAGENTA, COLOR_NONE, ATTR_FORCE),             # reference
+    }
 
+    def ToConsole (self, console):
         #----------------------------------------------------------------------#
         # Walker                                                               #
         #----------------------------------------------------------------------#
         def node_walk (node):
-            # console.Write ('[{}]'.format (node.name))
+            console.Write ('[{}]'.format (node.name))
             for is_node, child in node.children:
                 if is_node:
                     name = child.name
@@ -215,23 +225,10 @@ class DslEntry (object):
                         if len (name) > 1:
                             console.Write (' ' * int (name [1:]))
                         node_walk (child)
-                    # translation
-                    elif name == 'trn' and False:
-                        with console.State (7, None, 1): node_walk (child)
-                    # secondary
-                    elif name == '*':
-                        with console.State (0, None, 1): node_walk (child)
-                    # bold
-                    elif name == 'b':
-                        with console.State (5, None, 1): node_walk (child)
-                    # part
-                    elif name == 'p':
-                        with console.State (2, None, None): node_walk (child)
-                    # italic
-                    elif name == 'i':
-                        with console.State (None, None, 3): node_walk (child)
-                    elif name == 'r':
-                        with console.State (5, None, None): node_walk (child)
+                    # colored
+                    elif name in self.colors:
+                        with console.Scope (*self.colors [name]):
+                            node_walk (child)
                     # transcription
                     elif name == 't' and len (child.children) == 1:
                         console.Write (str (child.children [0][1].encode ('utf-16le')))
