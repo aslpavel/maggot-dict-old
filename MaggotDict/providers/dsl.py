@@ -15,17 +15,17 @@ __all__ = ('DslProvider',)
 #------------------------------------------------------------------------------#
 class DslProvider (object):
     file_suffix = '.dsl'
-    name_pattern  = re.compile (r'^#NAME\s*"([^"]*).*') # dictionary name
-    word_pattern  = re.compile (r'^[^\s]')              # beginning of word
-    del_pattern   = re.compile (r'\{[^}]*\}')           # delete part of word
-    sub_pattern   = re.compile (r'\(([^)]*)\)')         # alternative part of word
-    space_pattern = re.compile (r'(\s)\s+')             # double space pattern
+    header_pattern  = re.compile (r'^#([^\s]*)\s*"([^"]*).*') # dictionary header
+    word_pattern  = re.compile (r'^[^\s]')                    # beginning of word
+    del_pattern   = re.compile (r'\{[^}]*\}')                 # delete part of word
+    sub_pattern   = re.compile (r'\(([^)]*)\)')               # alternative part of word
+    space_pattern = re.compile (r'(\s)\s+')                   # double space pattern
     
     buffer_size = 1 << 16
 
     def __init__ (self, file):
         # open stream
-        self.name = file [:-len (self.file_suffix)]
+        self.file = file
         self.stream = open (file, 'rb', buffering = self.buffer_size)
 
         # determine encoding
@@ -43,24 +43,30 @@ class DslProvider (object):
         self.offset = self.stream.tell ()
 
         # parse headers
+        self.headers = {}
         for header, offset in self.lines (offset = 2):
             if not header.startswith ('#'):
                 break
             self.offset = offset
-            match = self.name_pattern.search (header)
+            match = self.header_pattern.search (header)
             if match:
-                self.name = match.group (1)
+                header, value = match.groups ()
+                self.headers [header.lower ()] = value
 
     #--------------------------------------------------------------------------#
     # Properties                                                               #
     #--------------------------------------------------------------------------#
     @property
     def Name (self):
-        return self.name
+        return self.headers.get ('name', self.file [:-len (self.file_suffix)])
 
     @property
     def LastModified (self):
         return os.stat (self.stream.name).st_mtime
+
+    @property
+    def Headers (self):
+        return self.headers
 
     #--------------------------------------------------------------------------#
     # Provider                                                                 #
@@ -205,12 +211,15 @@ class DslEntry (object):
     # Console                                                                  #
     #--------------------------------------------------------------------------#
     colors = {
-        'trn' : (COLOR_DEFAULT, COLOR_NONE, ATTR_NONE),              # translation
-        '*'   : (COLOR_BLACK,   COLOR_NONE, ATTR_BOLD),              # secondary
-        'b'   : (COLOR_MAGENTA, COLOR_NONE, ATTR_BOLD | ATTR_FORCE), # bold
-        'p'   : (COLOR_GREEN,   COLOR_NONE, ATTR_FORCE),             # part
-        'i'   : (COLOR_NONE,    COLOR_NONE, ATTR_ITALIC),            # italic
+        'trn' : (COLOR_WHITE,   COLOR_NONE, ATTR_BOLD),              # translation
         'ref' : (COLOR_MAGENTA, COLOR_NONE, ATTR_FORCE),             # reference
+        'ex'  : (COLOR_DEFAULT, COLOR_NONE, ATTR_FORCE),             # example
+        'p'   : (COLOR_GREEN,   COLOR_NONE, ATTR_FORCE),             # part
+        '*'   : (COLOR_BLACK,   COLOR_NONE, ATTR_BOLD),              # secondary
+        '\''  : (COLOR_NONE,    COLOR_NONE, ATTR_UNDERLINE),         # stress
+        'b'   : (COLOR_MAGENTA, COLOR_NONE, ATTR_BOLD | ATTR_FORCE), # bold
+        'i'   : (COLOR_NONE,    COLOR_NONE, ATTR_ITALIC),            # italic
+        'u'   : (COLOR_NONE,    COLOR_NONE, ATTR_UNDERLINE),         # underline
     }
     translit_color = (COLOR_GREEN, COLOR_NONE, ATTR_BOLD | ATTR_FORCE)
 
@@ -219,14 +228,13 @@ class DslEntry (object):
         # Walker                                                               #
         #----------------------------------------------------------------------#
         def node_walk (node):
-            # console.Write ('[{}]'.format (node.name))
             for is_node, child in node.children:
                 if is_node:
                     name = child.name
                     # indentation
                     if name.startswith ('m'):
                         if len (name) > 1:
-                            console.Write (' ' * int (name [1:]))
+                            console.Write ('  ' * int (name [1:]))
                         node_walk (child)
                     # colored
                     elif name in self.colors:
@@ -239,14 +247,20 @@ class DslEntry (object):
                             codes.fromstring (child.children [0][1].encode ('utf-16le'))
                             for code in codes:
                                 console.Write (transcription_map.get (code, b'?').decode ('utf-8'))
-                    # skip
-                    elif name in ('s',): pass
-                    # default
+                    # sound
+                    elif name == 's':
+                        with console.Scope (COLOR_DEFAULT, COLOR_CYAN, ATTR_BOLD):
+                            console.Write ('[sound]')
+                    # ignore
+                    elif name.startswith ('lang'): node_walk (child)
+                    elif name in ('com',): node_walk (child)
+                    # unhandled
                     else:
+                        console.Write ('[{}]'.format (child.name))
                         node_walk (child)
+                        console.Write ('[/{}]'.format (child.name))
                 else:
                     console.Write (child)
-            # console.Write ('[/{}]'.format (node.name))
                     
         node_walk (self.root)
 #------------------------------------------------------------------------------#

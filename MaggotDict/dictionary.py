@@ -96,7 +96,8 @@ class Dictionary (Mapping):
         return len (self.index)
 
     def __iter__ (self):
-        return self.index
+        for word, record in self.index.items ():
+            yield Entry (self, word, record)
 
     def __getitem__ (self, word):
         if isinstance (word, slice):
