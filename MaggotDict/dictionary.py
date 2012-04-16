@@ -24,6 +24,9 @@ __all__ = ('Dictionary',)
 # Dictionary                                                                   #
 #------------------------------------------------------------------------------#
 class Dictionary (Mapping):
+    dict_path = [path.join (xdg.xdg_data_home, 'maggot-dict')]
+    dict_path.extend (path.join (data_path, 'maggot-dict') for data_path in xdg.xdg_data_dirs)
+
     def __init__ (self, storage_file = None, logger = None):
         self.log = Log ('dict')
         self.disposable = CompositeDisposable ()
@@ -40,7 +43,7 @@ class Dictionary (Mapping):
 
         # open config
         self.config = SackConfig (self.storage, CELL_CONFIG, lambda: {
-            'dict_path' : [path.join (xdg.xdg_data_home, 'maggot-dict')],
+            'dict_path' : [],
             'providers' : {}, # name -> uid
         })
 
@@ -52,7 +55,7 @@ class Dictionary (Mapping):
         self.providers = {}
         updated = False
         for provider_type in providers.All:
-            for dict_path in self.config.dict_path:
+            for dict_path in itertools.chain (self.dict_path, self.config.dict_path):
                 for provider in provider_type.Discover (dict_path):
                     self.disposable += provider
 
