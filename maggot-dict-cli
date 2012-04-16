@@ -33,7 +33,7 @@ def main (app):
         word = ' '.join (sys.argv [1:])
         try:
             for name, entry in dct [word]:
-                with console.Scope (COLOR_BLUE, COLOR_NONE, ATTR_BOLD):
+                with console.Scope (COLOR_WHITE, COLOR_NONE, ATTR_BOLD):
                     console.Write ('[{}]\n'.format (' {} '.format (name).center (78, '='))) # '\u2015'
                 entry.ToConsole (console)
                 console.Write ('\n')
