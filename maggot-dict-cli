@@ -12,10 +12,10 @@ def Main (app):
         sys.exit (1)
 
     console = Console (sys.stdout)
-    with Dictionary (logger = app.Logger) as dictionary:
+    with Dictionary (logger = app.Logger) as dct:
         word = ' '.join (sys.argv [1:])
         try:
-            for name, entry in dictionary [word]:
+            for name, entry in dct [word]:
                 console.Write ('[{}]\n'.format (' {} '.format (name).center (78, '='))) # '\u2015'
                 entry.ToConsole (console)
                 console.Write ('\n')
