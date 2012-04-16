@@ -1,0 +1,13 @@
+post_install()
+{
+cat << EOF
+==> Don't froget to add dictionaries (.dict and .idx files)
+    to either \$XDG_DATA_HOME/maggot-dict or \$XDG_DATA_DIRS/maggot-dict
+EOF
+}
+
+post_upgrade()
+{
+    post_install
+}
+# vim: nu ft=sh :

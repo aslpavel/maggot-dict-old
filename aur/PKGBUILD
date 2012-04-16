@@ -1,0 +1,71 @@
+pkgname=maggot-dict-git
+pkgver=2
+pkgrel=0
+pkgdesc="Pure python cli (at least for now) based dictionary with bash completion"
+arch=('any')
+license=('GPL')
+url='https://github.com/aslpavel/maggot-dict'
+depends=(python)
+makedepends=(git)
+conflicts=()
+provides=()
+source=()
+md5sums=()
+install=maggot-dict.install
+
+_gitroot='git://github.com/aslpavel/maggot-dict.git'
+_gitname='maggot-dict'
+
+#------------------------------------------------------------------------------#
+# Build                                                                        #
+#------------------------------------------------------------------------------#
+build () {
+    cd $srcdir
+
+    msg 'Connecting to GIT server ...'
+    if [ -d $_gitname ]; then
+        cd $_gitname
+        git pull origin
+        git submodule update --recursive
+    else
+        git clone $_gitroot $_gitname
+        cd $_gitname
+        git submodule update --init --recursive
+    fi
+    git submodule update
+    msg 'The local files are updated'
+}
+
+#------------------------------------------------------------------------------#
+# Package                                                                      #
+#------------------------------------------------------------------------------#
+package () {
+    cd $srcdir/$_gitname
+
+    # copy source files
+    for src_file in $(find ./MaggotDict -name '*.py'); do
+        dst_file=$pkgdir/usr/lib/maggot-dict/$src_file
+        dst_path=$(dirname $dst_file)
+        if [ ! -d $dst_path ]; then
+            install -d $dst_path
+        fi
+        install -Tm664 $src_file $dst_file
+    done
+    python -m compileall -q $pkgdir/usr/lib/maggot-dict/MaggotDict
+    python -O -m compileall -q $pkgdir/usr/lib/maggot-dict/MaggotDict
+
+    # create required directories
+    install -d \
+        $pkgdir/usr/bin \
+        $pkgdir/usr/lib/maggot-dict \
+        $pkgdir/etc/bash_completion.d
+
+    # install
+    install -m775 maggot-dict-cli $pkgdir/usr/lib/maggot-dict
+    install -Tm664 scripts/maggot-dict-cli.comp $pkgdir/etc/bash_completion.d/maggot-dict-cli
+
+    # create link
+    ln -snf ../lib/maggot-dict/maggot-dict-cli $pkgdir/usr/bin/maggot-dict-cli
+}
+
+# vim: nu ft=sh columns=120 :
