@@ -11,7 +11,6 @@ conflicts=()
 provides=()
 source=()
 md5sums=()
-install=maggot-dict.install
 
 _gitroot='git://github.com/aslpavel/maggot-dict.git'
 _gitname='maggot-dict'
