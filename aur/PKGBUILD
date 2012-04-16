@@ -1,5 +1,5 @@
 pkgname=maggot-dict-git
-pkgver=2
+pkgver=1
 pkgrel=0
 pkgdesc="Pure python cli (at least for now) based dictionary with bash completion"
 arch=('any')
