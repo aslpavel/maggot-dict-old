@@ -253,7 +253,7 @@ class DslEntry (object):
                             console.Write ('[sound]')
                     # ignore
                     elif name.startswith ('lang '): node_walk (child)
-                    elif name.startswith ('c '): node_walk (child)
+                    elif name.startswith ('c'): node_walk (child)
                     elif name in ('com', '!trs'): node_walk (child)
                     # unhandled
                     else:
