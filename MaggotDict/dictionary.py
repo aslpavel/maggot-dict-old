@@ -56,6 +56,8 @@ class Dictionary (Mapping):
         updated = False
         for provider_type in providers.All:
             for dict_path in itertools.chain (self.dict_path, self.config.dict_path):
+                if not path.isdir (path.realpath (dict_path)):
+                    continue
                 for provider in provider_type.Discover (dict_path):
                     self.disposable += provider
 
@@ -110,7 +112,7 @@ class Dictionary (Mapping):
     #--------------------------------------------------------------------------#
     def bind (self, provider):
         # allocate uid
-        uid_mask = 0
+        uid, uid_mask = 0, 0
         for name, config in self.config.providers.Items ():
             uid_mask |= 1 << config.uid
         for uid in itertools.count ():
@@ -131,7 +133,7 @@ class Dictionary (Mapping):
 
                 # update progress
                 count += 1
-                if count % 100 == 0:
+                if not count % 100:
                     progress (str (count))
 
         # update config
@@ -140,7 +142,7 @@ class Dictionary (Mapping):
         return self.config.providers [provider.Name]
 
     def unbind (self, uids):
-        with self.log.Pending ('unbinding uids: {}'.format (', '.join (str (uid) for uid in uids))):
+        with self.log.Pending ('unbinding uids: {}'.format (list (uids))):
             # update index
             empty = []
             for entry in self:
@@ -148,8 +150,8 @@ class Dictionary (Mapping):
                 for uid in uids:
                     desc = entry.record.pop (uid, None)
                 if desc is not None:
-                    if not entry:
-                        empty.append [entry.Word]
+                    if not entry.record:
+                        empty.append (entry.Word)
                     else:
                         self.index [entry.Word] = entry.record
 

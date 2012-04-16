@@ -1,27 +1,66 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys
-from os import path
+import os
+import itertools
 
 from MaggotDict import *
+from MaggotDict.console import *
 from MaggotDict.pretzel.app import *
 
-def Main (app):
-    if len (sys.argv) < 2:
-        sys.stderr.write ('Usage: {} <word>\n'.format (path.basename (sys.argv [0]))) 
-        sys.exit (1)
-
-    console = Console (sys.stdout)
+completion_count = 30
+#------------------------------------------------------------------------------#
+# Main                                                                         #
+#------------------------------------------------------------------------------#
+def main (app):
+    # open dictionary
     with Dictionary (logger = app.Logger) as dct:
+        # parse options
+        comp_line, comp_point = os.environ.get ('COMP_LINE'), os.environ.get ('COMP_POINT')
+        if comp_line and comp_point:
+            bash_completion (dct, comp_line, int (comp_point))
+            return
+
+        if len (sys.argv) < 2:
+            app.Log.Error ('word is required')
+            sys.stderr.write ('Usage: {} <word>\n'.format (os.path.basename (sys.argv [0])))
+            sys.exit (1)
+
+        # create output console
+        console = Console (sys.stdout)
+
+        # lookup
         word = ' '.join (sys.argv [1:])
         try:
             for name, entry in dct [word]:
-                console.Write ('[{}]\n'.format (' {} '.format (name).center (78, '='))) # '\u2015'
+                with console.Scope (COLOR_BLUE, COLOR_NONE, ATTR_BOLD):
+                    console.Write ('[{}]\n'.format (' {} '.format (name).center (78, '='))) # '\u2015'
                 entry.ToConsole (console)
                 console.Write ('\n')
         except KeyError:
-            app.Log.Error ('word "{}" was not found'.format (word))
-            
+            app.Log.Error ('word \'{}\' was not found'.format (word))
+
+#------------------------------------------------------------------------------#
+# Bash Completion                                                              #
+#------------------------------------------------------------------------------#
+def bash_completion (dct, comp_line, comp_point):
+    name, word = comp_line [:comp_point].split (' ', 1)
+
+    # find matches
+    matches = list (filter (lambda match: match.startswith (word),
+        itertools.islice ((entry.Word for entry in dct [word:]), completion_count)))
+
+    # prefix words
+    prefix_max = os.path.commonprefix (matches)
+    prefix_len = prefix_max.rfind (' ') + 1
+
+    # output
+    for match in matches:
+        print (match [prefix_len:])
+
+#------------------------------------------------------------------------------#
+# Entry Point                                                                  #
+#------------------------------------------------------------------------------#
 if __name__ == '__main__':
-    Application (Main, 'maggot-dict-cli', console = True)
+    Application (main, 'maggot-dict-cli', console = True)
 # vim: nu ft=python columns=120 :
