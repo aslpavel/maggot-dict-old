@@ -27,10 +27,6 @@ class DictProvider (object):
     def Name (self):
         return self.name
 
-    @property
-    def LastModified (self):
-        return os.stat (self.index_file).st_mtime
-
     #--------------------------------------------------------------------------#
     # Provier                                                                  #
     #--------------------------------------------------------------------------#

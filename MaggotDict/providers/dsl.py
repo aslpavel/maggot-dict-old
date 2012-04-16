@@ -61,10 +61,6 @@ class DslProvider (object):
         return self.headers.get ('name', self.file [:-len (self.file_suffix)])
 
     @property
-    def LastModified (self):
-        return os.stat (self.stream.name).st_mtime
-
-    @property
     def Headers (self):
         return self.headers
 
