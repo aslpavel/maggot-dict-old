@@ -156,7 +156,6 @@ class Dictionary (Mapping):
                     else:
                         self.index [entry.Word] = entry.record
 
-            import pdb; pdb.set_trace ()
             for word in empty:
                 del self.index [word]
 

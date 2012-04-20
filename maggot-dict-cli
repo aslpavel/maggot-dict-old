@@ -62,5 +62,5 @@ def bash_completion (dct, comp_line, comp_point):
 # Entry Point                                                                  #
 #------------------------------------------------------------------------------#
 if __name__ == '__main__':
-    Application (main, 'maggot-dict-cli', console = False)
+    Application (main, 'maggot-dict-cli')
 # vim: nu ft=python columns=120 :
