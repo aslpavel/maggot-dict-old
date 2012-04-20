@@ -146,15 +146,17 @@ class Dictionary (Mapping):
             # update index
             empty = []
             for entry in self:
-                desc = None
+                changed = False
                 for uid in uids:
-                    desc = entry.record.pop (uid, None)
-                if desc is not None:
+                    changed = True
+                    entry.record.pop (uid, None)
+                if changed:
                     if not entry.record:
                         empty.append (entry.Word)
                     else:
                         self.index [entry.Word] = entry.record
 
+            import pdb; pdb.set_trace ()
             for word in empty:
                 del self.index [word]
 
