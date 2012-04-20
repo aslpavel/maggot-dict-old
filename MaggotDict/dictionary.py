@@ -16,8 +16,9 @@ from .pretzel.udb import *
 from .pretzel.udb.bptree import *
 from .pretzel.disposable import *
 
-CELL_INDEX = 0
-CELL_CONFIG = 1
+CELL_INDEX  = 0
+CELL_LOG    = 1
+CELL_CONFIG = 2
 
 __all__ = ('Dictionary',)
 #------------------------------------------------------------------------------#
@@ -27,7 +28,7 @@ class Dictionary (Mapping):
     dict_path = [path.join (xdg.xdg_data_home, 'maggot-dict')]
     dict_path.extend (path.join (data_path, 'maggot-dict') for data_path in xdg.xdg_data_dirs)
 
-    def __init__ (self, storage_file = None, logger = None):
+    def __init__ (self, db_file = None, logger = None):
         self.log = Log ('dict')
         self.disposable = CompositeDisposable ()
 
@@ -35,21 +36,20 @@ class Dictionary (Mapping):
         if logger is not None:
             self.log.Subscribe (logger)
 
-        # open storage
-        if storage_file is None:
-            storage_file = path.join (xdg.xdg_cache_home, 'maggot-dict.db')
-        self.storage = FileSack (storage_file, 'c', order = 32) # 4GB storage
-        self.disposable += self.storage
+        # open db
+        if db_file is None:
+            db_file = path.join (xdg.xdg_cache_home, 'maggot-dict.db')
+        self.db = xDB (db_file, 'c')
+        self.disposable += self.db
 
         # open config
-        self.config = SackConfig (self.storage, CELL_CONFIG, lambda: {
+        self.config = SackConfig (self.db.Sack, CELL_CONFIG, lambda: {
             'dict_path' : [],
             'providers' : {}, # name -> uid
         })
 
         # open index
-        self.index = BPTree (SackProvider (self.storage, order = 256, type = 'PP', cell = CELL_INDEX,
-            flags = SackProvider.FLAG_COMPRESSION))
+        self.index = self.db.Table (CELL_INDEX, type = 'PP', flags = FLAG_COMPRESSION)
 
         # providers
         self.providers = {}
@@ -79,9 +79,9 @@ class Dictionary (Mapping):
             self.unbind (uids)
             updated = True
 
-        # flush storage
+        # flush db
         if updated:
-            self.index.provider.Flush ()
+            self.index.Flush ()
             self.config.Flush ()
 
     #--------------------------------------------------------------------------#
