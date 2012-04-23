@@ -1,0 +1,39 @@
+Maggot Dictionary
+=================
+    It's a pure python (for now console based) dictionary
+
+Supported Formats:
+    * DICT   (.dict|.idx)
+    * Lingvo (.dsl)
+
+Futures:
+    * Bash completion
+    * Colored output
+    * Compatbile with python 3
+    * Fast | Lightweight | Extensible
+
+Dependencies
+============
+    Only python
+
+Install
+=======
+    From archive:
+        python setup.py install
+
+    From git:
+        git clone git://github.com/aslpavel/maggot-dict.git maggot-dict
+        cd maggot-dict
+        git submodule update --init --recursive
+        python setup.py install
+
+    For Arch Linux users:
+        There is PKGBUILD script inside aur directory
+
+Dictionary Installation
+=======================
+    Put dictionary files inside either:
+        XDG_DATA_HOME/maggot-dict (usually '$HOME/.local/share/maggot-dict')
+        XDG_DATA_DIRS/maggot-dict (usually '/usr/share/maggot-dict:/usr/share/local/maggot-dict')
+
+# vim: columns=120 :

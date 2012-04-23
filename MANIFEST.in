@@ -1,0 +1,4 @@
+include README
+include maggot-dict-cli
+recursive-include aur *
+recursive-include scripts *

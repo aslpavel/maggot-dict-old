@@ -1,6 +1,6 @@
 pkgname=maggot-dict-git
 pkgver=1
-pkgrel=0
+pkgrel=1
 pkgdesc="Pure python cli (at least for now) based dictionary with bash completion"
 arch=('any')
 license=('GPL')
@@ -40,31 +40,7 @@ build () {
 #------------------------------------------------------------------------------#
 package () {
     cd $srcdir/$_gitname
-
-    # copy source files
-    for src_file in $(find ./MaggotDict -name '*.py'); do
-        dst_file=$pkgdir/usr/lib/maggot-dict/$src_file
-        dst_path=$(dirname $dst_file)
-        if [ ! -d $dst_path ]; then
-            install -d $dst_path
-        fi
-        install -Tm664 $src_file $dst_file
-    done
-    python -m compileall -q $pkgdir/usr/lib/maggot-dict/MaggotDict
-    python -O -m compileall -q $pkgdir/usr/lib/maggot-dict/MaggotDict
-
-    # create required directories
-    install -d \
-        $pkgdir/usr/bin \
-        $pkgdir/usr/lib/maggot-dict \
-        $pkgdir/etc/bash_completion.d
-
-    # install
-    install -m775 maggot-dict-cli $pkgdir/usr/lib/maggot-dict
-    install -Tm664 scripts/maggot-dict-cli.comp $pkgdir/etc/bash_completion.d/maggot-dict-cli
-
-    # create link
-    ln -snf ../lib/maggot-dict/maggot-dict-cli $pkgdir/usr/bin/maggot-dict-cli
+    python ./setup.py install --prefix=/usr --root=$pkgdir
 }
 
 # vim: nu ft=sh columns=120 :
