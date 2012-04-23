@@ -6,7 +6,7 @@ Supported Formats:
     * DICT   (.dict|.idx)
     * Lingvo (.dsl)
 
-Futures:
+Features:
     * Bash completion
     * Colored output
     * Compatible with python 3
