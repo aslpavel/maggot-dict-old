@@ -1,4 +1,4 @@
 include README
 include maggot-dict-cli
+include scripts/maggot-dict-cli
 recursive-include aur *
-recursive-include scripts *
