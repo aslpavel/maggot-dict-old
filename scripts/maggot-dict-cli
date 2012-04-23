@@ -1,4 +1,4 @@
-# maggot-dict-cli compltion
+# maggot-dict-cli bash completion
 #   maggot-dict-cli checks environment for COMP_LINE & COMP_POINT
 #   and if they are found prefroms compltion instead of lookup
 ##

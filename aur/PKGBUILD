@@ -1,10 +1,11 @@
+# Maintainer: Pavel Aslanov <asl.pavel@gmail.com>
 pkgname=maggot-dict-git
 pkgver=1
 pkgrel=1
-pkgdesc="Pure python cli (at least for now) based dictionary with bash completion"
+pkgdesc='Pure python (for now console based) dictionary'
 arch=('any')
-license=('GPL')
 url='https://github.com/aslpavel/maggot-dict'
+license=('GPL')
 depends=(python)
 makedepends=(git)
 conflicts=()
