@@ -28,7 +28,7 @@ Install
         python setup.py install
 
     For Arch Linux users:
-        There is PKGBUILD script inside aur directory
+        There is PKGBUILD script inside aur directory or just "yaourt maggot-dict-git"
 
 Dictionary Installation
 =======================
