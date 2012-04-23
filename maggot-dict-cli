@@ -8,7 +8,7 @@ from MaggotDict import *
 from MaggotDict.console import *
 from MaggotDict.pretzel.app import *
 
-completion_count = 30
+completion_count = 50
 #------------------------------------------------------------------------------#
 # Main                                                                         #
 #------------------------------------------------------------------------------#
