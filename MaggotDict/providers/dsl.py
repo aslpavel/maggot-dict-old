@@ -158,7 +158,7 @@ class DslEntry (object):
     escape_pattern = re.compile (r'\\(.)')                   # escape
 
     def __init__ (self, data):
-        self.root = DslNode (None)
+        self.root = DslNode ('')
         data = self.indent_pattern.sub ('\n', data)
 
         # build AST
