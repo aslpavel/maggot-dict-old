@@ -2,6 +2,7 @@
 import os
 import re
 import io
+import sys
 import array
 import codecs
 import itertools
@@ -220,6 +221,14 @@ class DslEntry (object):
     translit_color = (COLOR_GREEN, COLOR_NONE, ATTR_BOLD | ATTR_FORCE)
 
     def ToConsole (self, console):
+        if sys.version_info [0] < 3:
+            encoder = codecs.getencoder ('utf-8')
+            def write_child (child):
+                console.Write (encoder (child) [0])
+        else:
+            def write_child (child):
+                console.Write (child)
+
         #----------------------------------------------------------------------#
         # Walker                                                               #
         #----------------------------------------------------------------------#
@@ -242,7 +251,7 @@ class DslEntry (object):
                             codes = array.array ('H')
                             codes.fromstring (child.children [0][1].encode ('utf-16le'))
                             for code in codes:
-                                console.Write (transcription_map.get (code, b'?').decode ('utf-8'))
+                                console.Write (transcription_map.get (code, '?'))
                     # sound
                     elif name == 's':
                         with console.Scope (COLOR_DEFAULT, COLOR_CYAN, ATTR_BOLD):
@@ -257,7 +266,7 @@ class DslEntry (object):
                         node_walk (child)
                         console.Write ('[/{}]'.format (child.name))
                 else:
-                    console.Write (child)
+                    write_child (child)
                     
         node_walk (self.root)
 #------------------------------------------------------------------------------#
@@ -273,7 +282,8 @@ class DslNode (object):
 #------------------------------------------------------------------------------#
 # Transcription                                                                #
 #------------------------------------------------------------------------------#
-transcription_map = {
+transcription_conv = (lambda value: value) if sys.version_info [0] < 3 else (lambda value: value.decode ('utf-8'))
+transcription_map = {code: transcription_conv (value) for code, value in {
     0x0020: b" ",                        # space
     0x0027: b'\'',                       # '
     0x0028: b'(',                        # (
@@ -434,5 +444,5 @@ transcription_map = {
     0x2039: b'\xca\xa4',                 # ʤ
     0x20ac: b'\xc9\x94',                 # ɔ
     0x2116: b'a\xcd\x9co',               # a͜o
-}
+}.items ()}
 # vim: nu ft=python columns=120 :

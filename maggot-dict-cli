@@ -1,7 +1,8 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-import sys
+import io
 import os
+import sys
 import itertools
 
 from MaggotDict import *
@@ -27,7 +28,10 @@ def main (app):
             sys.exit (1)
 
         # create output console
-        console = Console (sys.stdout)
+        if sys.version_info [0] < 3:
+            console = Console (io.open (sys.stdout.fileno (), 'wb', closefd = False))
+        else:
+            console = Console (io.open (sys.stdout.fileno (), 'w', encoding = 'utf-8', closefd = False))
 
         # lookup
         word = ' '.join (sys.argv [1:])
