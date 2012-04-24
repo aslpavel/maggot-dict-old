@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
 import struct
 import codecs
 from os import path
@@ -114,6 +115,9 @@ class DictEntry (object):
     # Console                                                                  #
     #--------------------------------------------------------------------------#
     def ToConsole (self, console):
-        console.Write (self.data)
+        if sys.version_info [0] < 3:
+            console.Write (self.data.encode ('utf-8'))
+        else:
+            console.Write (self.data)
 
 # vim: nu ft=python columns=120 :
