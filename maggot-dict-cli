@@ -35,6 +35,8 @@ def main (app):
 
         # lookup
         word = ' '.join (sys.argv [1:])
+        if sys.version_info [0] < 3:
+            word = word.decode ('utf-8')
         try:
             for name, entry in dct [word]:
                 with console.Scope (COLOR_WHITE, COLOR_NONE, ATTR_BOLD):
