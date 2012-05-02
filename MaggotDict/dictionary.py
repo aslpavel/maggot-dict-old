@@ -120,7 +120,7 @@ class Dictionary (Mapping):
                 break
 
         # update index
-        count = 0
+        size = 0
         with self.log.Progress (provider.Name) as progress:
             progress ('0')
 
@@ -132,12 +132,12 @@ class Dictionary (Mapping):
                 self.index [word] = record
 
                 # update progress
-                count += 1
-                if not count % 100:
-                    progress (str (count))
+                size += 1
+                if not size % 100:
+                    progress (str (size))
 
         # update config
-        self.config.providers [provider.Name] = {'uid' : uid}
+        self.config.providers [provider.Name] = {'uid' : uid, 'size' : size}
 
         return self.config.providers [provider.Name]
 
