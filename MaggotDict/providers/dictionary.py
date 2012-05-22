@@ -5,6 +5,8 @@ import struct
 import codecs
 from os import path
 
+from ..entry import *
+
 __all__ = ('DictProvider',)
 #------------------------------------------------------------------------------#
 # Dict Provider                                                                #
@@ -64,7 +66,10 @@ class DictProvider (object):
         """Get entry by it's descriptor"""
         offset, size = desc
         self.data_stream.seek (offset)
-        return DictEntry (self.decode (self.data_stream.read (size)) [0])
+
+        entry = Entry ('')
+        entry.AddText (self.decode (self.data_stream.read (size)) [0])
+        return entry
 
     #--------------------------------------------------------------------------#
     # Dispose                                                                  #
@@ -102,22 +107,4 @@ class DictProvider (object):
             for data, index in find_dict (root, os.listdir (root)):
                 yield cls (data, index)
                    
-#------------------------------------------------------------------------------#
-# Entry                                                                        #
-#------------------------------------------------------------------------------#
-class DictEntry (object):
-    __slots__ = ('data',)
-
-    def __init__ (self, data):
-        self.data = data
-
-    #--------------------------------------------------------------------------#
-    # Console                                                                  #
-    #--------------------------------------------------------------------------#
-    def ToConsole (self, console):
-        if sys.version_info [0] < 3:
-            console.Write (self.data.encode ('utf-8'))
-        else:
-            console.Write (self.data)
-
 # vim: nu ft=python columns=120 :

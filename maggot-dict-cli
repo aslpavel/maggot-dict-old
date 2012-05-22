@@ -32,17 +32,19 @@ def main (app):
             console = Console (io.open (sys.stdout.fileno (), 'wb', closefd = False))
         else:
             console = Console (io.open (sys.stdout.fileno (), 'w', encoding = 'utf-8', closefd = False))
+        renderer = ConsoleEntryRenderer (console)
 
         # lookup
         word = ' '.join (sys.argv [1:])
         if sys.version_info [0] < 3:
             word = word.decode ('utf-8')
         try:
-            for name, entry in dct [word]:
-                with console.Scope (COLOR_WHITE, COLOR_NONE, ATTR_BOLD):
-                    console.Write ('[{}]\n'.format (' {} '.format (name).center (78, '='))) # '\u2015'
-                entry.ToConsole (console)
-                console.Write ('\n')
+            with renderer:
+                for name, entry in dct [word]:
+                    with console.Scope (COLOR_WHITE, COLOR_NONE, ATTR_BOLD):
+                        console.Write ('[{}]\n'.format (' {} '.format (name).center (78, '='))) # '\u2015'
+                    entry.Render (renderer)
+                    console.Write ('\n')
         except KeyError:
             app.Log.Error ('word \'{}\' was not found'.format (word))
 
@@ -68,5 +70,5 @@ def bash_completion (dct, comp_line, comp_point):
 # Entry Point                                                                  #
 #------------------------------------------------------------------------------#
 if __name__ == '__main__':
-    Application (main, 'maggot-dict-cli')
+    Application (main, 'maggot-dict-cli', console = False)
 # vim: nu ft=python columns=120 :

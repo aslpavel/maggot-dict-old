@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-import io
 import sys
 import array
 import codecs
 import itertools
-from os import path
 
 from ..console import *
+from ..entry import *
 
 __all__ = ('DslProvider',)
 #------------------------------------------------------------------------------#
@@ -101,7 +100,7 @@ class DslProvider (object):
             for file in files:
                 if not file.lower ().endswith (cls.file_suffix):
                     continue
-                yield path.join (root, file)
+                yield os.path.join (root, file)
 
         if recursive:
             for root, dirs, files in os.walk (root):
@@ -152,133 +151,168 @@ class DslProvider (object):
 #------------------------------------------------------------------------------#
 # Entry                                                                        #
 #------------------------------------------------------------------------------#
-class DslEntry (object):
-    __slots__ = ('root',)
-    tag_pattern    = re.compile (r'(?<!\\)\[(/)?([^\]]+)\]') # tag
-    indent_pattern = re.compile (r'\r?\n\s*', re.MULTILINE)  # new line with offset
-    escape_pattern = re.compile (r'\\(.)')                   # escape
+entry_tag_pattern    = re.compile (r'(?<!\\)\[(/)?([^\]\s]+)(\s[^\]]+)?\]') # tag
+entry_indent_pattern = re.compile (r'\r?\n\s*', re.MULTILINE)  # new line with offset
+entry_escape_pattern = re.compile (r'\\(.)')                   # escape
+entry_tag_map = {
+    '\'' : 'stress',
+    '*'  : 'fold',
+    'b'  : 'bold',
+    'c'  : 'color',
+    'com': 'comment',
+    'ex' : 'example',
+    'i'  : 'italic',
+    'p'  : 'type',      # part of speech
+    'ref': 'link',
+    'u'  : 'underline',
+    's'  : 'sound',
+    't'  : 'transcript',
+    'trn': 'translation',
+}
 
-    def __init__ (self, data):
-        self.root = DslNode ('')
-        data = self.indent_pattern.sub ('\n', data)
+def DslEntry (data):
+    entry = Entry ('')
+    data = entry_indent_pattern.sub ('\n', data)
 
-        # build AST
-        offset, stack, match = 0, [self.root], None
-        for match in self.tag_pattern.finditer (data):
-            # state
-            close, name = match.groups ()
-            node = stack [-1]
+    #----------------------------------------------------------------------#
+    # Build AST                                                            #
+    #----------------------------------------------------------------------#
+    offset, stack, match = 0, [entry], None
+    for match in entry_tag_pattern.finditer (data):
+        # state
+        close, name, value = match.groups ()
+        node = stack [-1]
 
-            # text
-            if offset < match.start ():
-                node.children.append ((False, self.escape_pattern.sub (r'\1', data [offset:match.start ()])))
-            offset = match.end ()
+        #------------------------------------------------------------------#
+        # Text                                                             #
+        #------------------------------------------------------------------#
+        if offset < match.start ():
+            node.AddText (entry_escape_pattern.sub (r'\1', data [offset:match.start ()]))
+        offset = match.end ()
 
-            # node
-            if close:
-                node = stack.pop ()
-                # nodes are not nested
-                if not node.name.startswith (name):
-                    # restore stack
-                    stack.append (node)
-                    # find matching name
-                    names = [name]
-                    for index, node in enumerate (reversed (stack)):
-                        if node.name.startswith (name):
-                            # shift names
-                            for node in stack [- index - 1:]:
-                                node.name = names.pop ()
-                            break
-                        else:
-                            names.append (node.name)
-                    # unwind stack
-                    stack.pop ()
-            else:
-                stack.append (DslNode (name))
-                node.children.append ((True, stack [-1]))
+        #------------------------------------------------------------------#
+        # Node                                                             #
+        #------------------------------------------------------------------#
+        if close:
+            node = stack.pop ()
 
-        # tail
-        if match:
-            if match.end () < len (data):
-                stack [-1].children.append ((False,  self.escape_pattern.sub (r'\1', data [match.end ():])))
-        else:
-            stack [-1].children.append ((False,  self.escape_pattern.sub (r'\1', data)))
-
-    #--------------------------------------------------------------------------#
-    # Console                                                                  #
-    #--------------------------------------------------------------------------#
-    colors = {
-        'trn' : (COLOR_WHITE,   COLOR_NONE, ATTR_BOLD),              # translation
-        'ref' : (COLOR_MAGENTA, COLOR_NONE, ATTR_FORCE),             # reference
-        'ex'  : (COLOR_DEFAULT, COLOR_NONE, ATTR_FORCE),             # example
-        'p'   : (COLOR_GREEN,   COLOR_NONE, ATTR_FORCE),             # part
-        '*'   : (COLOR_BLACK,   COLOR_NONE, ATTR_BOLD),              # secondary
-        '\''  : (COLOR_NONE,    COLOR_NONE, ATTR_UNDERLINE),         # stress
-        'b'   : (COLOR_MAGENTA, COLOR_NONE, ATTR_BOLD | ATTR_FORCE), # bold
-        'i'   : (COLOR_NONE,    COLOR_NONE, ATTR_ITALIC),            # italic
-        'u'   : (COLOR_NONE,    COLOR_NONE, ATTR_UNDERLINE),         # underline
-    }
-    translit_color = (COLOR_GREEN, COLOR_NONE, ATTR_BOLD | ATTR_FORCE)
-
-    def ToConsole (self, console):
-        if sys.version_info [0] < 3:
-            encoder = codecs.getencoder ('utf-8')
-            def write_child (child):
-                console.Write (encoder (child) [0])
-        else:
-            def write_child (child):
-                console.Write (child)
-
-        #----------------------------------------------------------------------#
-        # Walker                                                               #
-        #----------------------------------------------------------------------#
-        def node_walk (node):
-            for is_node, child in node.children:
-                if is_node:
-                    name = child.name
-                    # indentation
-                    if name.startswith ('m'):
-                        if len (name) > 1:
-                            console.Write ('  ' * int (name [1:]))
-                        node_walk (child)
-                    # colored
-                    elif name in self.colors:
-                        with console.Scope (*self.colors [name]):
-                            node_walk (child)
-                    # transcription
-                    elif name == 't' and len (child.children) == 1:
-                        with console.Scope (*self.translit_color):
-                            codes = array.array ('H')
-                            codes.fromstring (child.children [0][1].encode ('utf-16le'))
-                            for code in codes:
-                                console.Write (transcription_map.get (code, '?'))
-                    # sound
-                    elif name == 's':
-                        with console.Scope (COLOR_DEFAULT, COLOR_CYAN, ATTR_BOLD):
-                            console.Write ('[sound]')
-                    # ignore
-                    elif name.startswith ('lang'): node_walk (child)
-                    elif name.startswith ('c'): node_walk (child)
-                    elif name in ('com', '!trs'): node_walk (child)
-                    # unhandled
+            #--------------------------------------------------------------#
+            # Order                                                        #
+            #--------------------------------------------------------------#
+            if not node.Name.startswith (name):
+                # restore stack
+                stack.append (node)
+                # find matching name
+                names = [name]
+                for index, node in enumerate (reversed (stack)):
+                    if node.Name.startswith (name):
+                        # shift names
+                        for node in stack [- index - 1:]:
+                            node.Name = names.pop ()
+                        break
                     else:
-                        console.Write ('[{}]'.format (child.name))
-                        node_walk (child)
-                        console.Write ('[/{}]'.format (child.name))
-                else:
-                    write_child (child)
-                    
-        node_walk (self.root)
-        console.Flush ()
-#------------------------------------------------------------------------------#
-# Node                                                                         #
-#------------------------------------------------------------------------------#
-class DslNode (object):
-    __slots__ = ('name', 'children')
+                        names.append (node.Name)
+                # unwind stack
+                node = stack.pop ()
 
-    def __init__ (self, name):
-        self.name = name
-        self.children = []
+            #--------------------------------------------------------------#
+            # Transcription                                                #
+            #--------------------------------------------------------------#
+            if node.Name == 't' and len (node) == 1 and not node [0][0]:
+                buffer = []
+                codes = array.array ('H')
+                codes.fromstring (node [0][1].encode ('utf-16le'))
+                for code in codes:
+                    buffer.append (transcription_map.get (code, '?'))
+                node [0] = (False, ''.join (buffer))
+
+            #------------------------------------------------------------------#
+            # Sound                                                            #
+            #------------------------------------------------------------------#
+            elif node.Name == 's' and len (node) == 1:
+                node.Value    = node [0][1]
+                node.Children = []
+            
+            #------------------------------------------------------------------#
+            # Indent                                                           #
+            #------------------------------------------------------------------#
+            if node.Name.startswith ('m'):
+                node.Value = int (node.Name [1:]) if len (node.Name) > 1 else 0
+                node.Name  = 'indent'
+
+            #------------------------------------------------------------------#
+            # Rename                                                           #
+            #------------------------------------------------------------------#
+            name = entry_tag_map.get (node.Name)
+            if name:
+                node.Name = name
+        else:
+            stack.append (node.AddChild (name, value.strip () if value else None))
+
+    #----------------------------------------------------------------------#
+    # Tail                                                                 #
+    #----------------------------------------------------------------------#
+    if match:
+        if match.end () < len (data):
+            stack [-1].children.append ((False,  entry_escape_pattern.sub (r'\1', data [match.end ():])))
+    else:
+        stack [-1].children.append ((False,  entry_escape_pattern.sub (r'\1', data)))
+
+    #--------------------------------------------------------------------------#
+    # Folds                                                                    #
+    #--------------------------------------------------------------------------#
+    # swap 'folds' with 'indents' and merge white spaces
+    path = []
+    def walk_hoist (node):
+        if node.Name == 'fold':
+            parent = path [-1]
+
+            # swap
+            if parent.Name == 'indent' and len (parent) == 1:
+                node.Value, parent.Value = parent.Value, node.Value
+                node.Name, parent.Name = parent.Name, node.Name
+                node   = parent
+                parent = path [-2]
+
+            # merge spaces
+            index = parent.Children.index ((True, node)) + 1
+            if index < len (parent):
+                 is_node, left_sibling = parent [index]
+                 if not is_node and not len (left_sibling.strip ()):
+                     parent.Children.pop  (index)
+                     node.Children.append ((is_node, left_sibling))
+
+            return
+
+        path.append (node)
+        for is_node, child in node:
+            if is_node:
+                walk_hoist (child)
+        path.pop ()
+    walk_hoist (entry)
+
+    # merge adjoining folds
+    def walk_join (node):
+        fold, is_node, child, children = None, None, None, []
+        for is_node, child in node:
+            if is_node and child.Name == 'fold':
+                if fold is None:
+                    fold = child
+                else:
+                    fold.Children.extend (child.Children)
+            else:
+                if fold is not None:
+                    children.append ((True, fold))
+                    fold = None
+                children.append ((is_node, child))
+                if is_node:
+                    walk_join (child)
+        if is_node and child.Name == 'fold':
+            children.append ((True, child))
+        node.Children = children
+    walk_join (entry)
+
+    return entry
 
 #------------------------------------------------------------------------------#
 # Transcription                                                                #

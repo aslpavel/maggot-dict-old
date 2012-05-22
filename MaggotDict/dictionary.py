@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-import sys
-import json
+import struct
+import bisect
 import itertools
 from os import path
 from collections import Mapping
@@ -8,17 +8,17 @@ from collections import Mapping
 # local
 from . import providers
 from . import xdg
+from . import fenwick
 
 # pretzel
 from .pretzel.log import *
-from .pretzel.config import *
 from .pretzel.udb import *
-from .pretzel.udb.bptree import *
+from .pretzel.config import *
 from .pretzel.disposable import *
 
-CELL_INDEX  = 0
-CELL_LOG    = 1
-CELL_CONFIG = 2
+CELL_CONFIG  = 0
+CELL_INDEX   = 1
+CELL_LOG     = 10
 
 __all__ = ('Dictionary',)
 #------------------------------------------------------------------------------#
@@ -44,16 +44,27 @@ class Dictionary (Mapping):
 
         # open config
         self.config = SackConfig (self.db.Sack, CELL_CONFIG, lambda: {
-            'dict_path' : [],
-            'providers' : {}, # name -> uid
+            'dict_path'    : [],
+            'providers'    : {}, # name -> uid
+            'fenwick_desc' : None
         })
 
         # open index
         self.index = self.db.Table (CELL_INDEX, type = 'PP', flags = FLAG_COMPRESSION)
 
+        # update flag
+        updated = False
+
+        # open fenwick
+        if self.config.fenwick_desc is None:
+            self.fenwick_sum = fenwick.FenwickSum (1 << 16) # length of set of two bytes words
+            self.config.fenwick_desc = self.db.Sack.Push (self.fenwick_sum.Dump ())
+            updated = True
+        else:
+            self.fenwick_sum = fenwick.FenwickSum.Load (self.db.Sack.Get (self.config.fenwick_desc))
+
         # providers
         self.providers = {}
-        updated = False
         for provider_type in providers.All:
             for dict_path in itertools.chain (self.dict_path, self.config.dict_path):
                 if not path.isdir (path.realpath (dict_path)):
@@ -81,6 +92,7 @@ class Dictionary (Mapping):
 
         # flush db
         if updated:
+            self.config.fenwick_desc = self.db.Sack.Push (self.fenwick_sum.Dump (), self.config.fenwick_desc)
             self.index.Flush ()
             self.config.Flush ()
 
@@ -103,9 +115,35 @@ class Dictionary (Mapping):
 
     def __getitem__ (self, word):
         if isinstance (word, slice):
-            return (Entry (self, word, record) for word, record in self.index [word])
+            return (Entry (self, word, record) for word, record in
+                self.index [None if word.start is None else word.start.encode ():
+                            None if word.stop is None  else word.stop.encode ()])
         else:
+            word = word.encode ()
             return Entry (self, word, self.index [word])
+
+    #--------------------------------------------------------------------------#
+    # Scroll                                                                   #
+    #--------------------------------------------------------------------------#
+    def Scroll (self, value):
+        if not (0 <= value <= 1):
+            raise ValueError ('Scroll value is not [0, 1]: \'{}\''.format (value))
+
+        index = int ((len (self) - 1) * value)
+        pos   = bisect.bisect (self.fenwick_sum, index) - 1
+        if pos >= 0:
+            index -= self.fenwick_sum [pos]
+            for word, record in itertools.islice (self.index [self.pos_struct.pack (pos + 1):], index, index + 1):
+                return Entry (self, word, record)
+        else:
+            for entry in itertools.islice (self.index, index, index + 1):
+                return Entry (self, word, record)
+
+    pos_struct = struct.Struct ('!H')
+    def word_to_pos (self, word):
+        if len (word) < 2:
+            word += b' '
+        return self.pos_struct.unpack (word [:2]) [0]
 
     #--------------------------------------------------------------------------#
     # Private                                                                  #
@@ -125,9 +163,11 @@ class Dictionary (Mapping):
             progress ('0')
 
             for word, desc in provider:
+                word = word.encode ()
                 record = self.index.get (word)
                 if record is None:
                     record = {}
+                    self.fenwick_sum.Add (self.word_to_pos (word), 1)
                 record [uid] = desc
                 self.index [word] = record
 
@@ -158,6 +198,7 @@ class Dictionary (Mapping):
 
             for word in empty:
                 del self.index [word]
+                self.fenwick_sum.Add (self.word_to_pos (word), -1)
 
             # update config
             names = []
@@ -166,7 +207,7 @@ class Dictionary (Mapping):
                     names.append (name)
             for name in names:
                 del self.config.providers [name]
-
+    
     #--------------------------------------------------------------------------#
     # Dispose                                                                  #
     #--------------------------------------------------------------------------#
@@ -187,13 +228,23 @@ class Entry (object):
     __slots__ = ('owner', 'word', 'record')
     def __init__ (self, owner, word, record):
         self.owner = owner
-        self.word = word
+        self.word = word.decode ()
         self.record = record
 
+    #--------------------------------------------------------------------------#
+    # Properites                                                               #
+    #--------------------------------------------------------------------------#
     @property
     def Word (self):
         return self.word
 
+    @property
+    def Scroll (self):
+        return self.owner.fenwick_sum [self.owner.word_to_pos (self.word.encode ())]
+
+    #--------------------------------------------------------------------------#
+    # Records                                                                  #
+    #--------------------------------------------------------------------------#
     def __iter__ (self):
         for uid, desc in self.record.items ():
             provider = self.owner.providers [uid]
