@@ -123,14 +123,13 @@ class Dictionary (Mapping):
             return Entry (self, word, self.index [word])
 
     #--------------------------------------------------------------------------#
-    # Scroll                                                                   #
+    # Find by index                                                            #
     #--------------------------------------------------------------------------#
-    def Scroll (self, value):
-        if not (0 <= value <= 1):
-            raise ValueError ('Scroll value is not [0, 1]: \'{}\''.format (value))
+    def FindByIndex (self, index):
+        if not (0 <= index < len (self)):
+            raise ValueError ('Scroll index is not [0, {}]: \'{}\''.format (len (self), index))
 
-        index = int ((len (self) - 1) * value)
-        pos   = bisect.bisect (self.fenwick_sum, index) - 1
+        pos = bisect.bisect (self.fenwick_sum, index) - 1
         if pos >= 0:
             index -= self.fenwick_sum [pos]
             for word, record in itertools.islice (self.index [self.pos_struct.pack (pos + 1):], index, index + 1):
@@ -239,8 +238,10 @@ class Entry (object):
         return self.word
 
     @property
-    def Scroll (self):
-        return self.owner.fenwick_sum [self.owner.word_to_pos (self.word.encode ())]
+    def Index (self):
+        word = self.word.encode ()
+        return self.owner.fenwick_sum [self.owner.word_to_pos (word) - 1] \
+            + len (list (self.owner.index [word [:2]:word])) - 1
 
     #--------------------------------------------------------------------------#
     # Records                                                                  #

@@ -44,7 +44,24 @@ Resources = {
                 <property name="margin">3</property>
                 <property name="spacing">3</property>
                 <child>
-                  <object class="GtkEntry" id="word_entry">
+                  <object class="GtkBox" id="entry_box">
+                    <child>
+                      <object class="GtkEntry" id="word_entry">
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="padding">3</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="translate_button">
+                        <property name="label">Translate</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                      </packing>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -52,40 +69,7 @@ Resources = {
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkBox" id="list_box">
-                    <child>
-                      <object class="GtkTreeView" id="list_view">
-                        <property name="enable_search">False</property>
-                        <property name="model">list_store</property>
-                        <child>
-                          <object class="GtkTreeViewColumn" id="list_word_column">
-                            <property name="title">Word</property>
-                            <child>
-                              <object class="GtkCellRendererText" id="list_word_renderer"/>
-                              <attributes>
-                                <attribute name="text">0</attribute>
-                              </attributes>
-                            </child>
-                          </object>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="expand">True</property>
-                        <property name="fill">True</property>
-                        <property name="position">0</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkScrollbar" id="list_scroll">
-                        <property name="orientation">vertical</property>
-                        <property name="adjustment">list_adjust</property>
-                      </object>
-                      <packing>
-                        <property name="expand">False</property>
-                        <property name="position">1</property>
-                      </packing>
-                    </child>
-                  </object>
+                  <object class="GtkBox" id="grid_box" />
                   <packing>
                     <property name="expand">True</property>
                     <property name="fill">True</property>
@@ -158,20 +142,16 @@ Resources = {
           </packing>
         </child>
         <child>
-          <object class="GtkOverlay" id="view_overlay">
+          <object class="GtkScrolledWindow" id="view_window">
+            <property name="hscrollbar_policy">never</property>
+            <property name="vscrollbar_policy">always</property>
             <child>
-              <object class="GtkScrolledWindow" id="view_window">
-                <property name="hscrollbar_policy">never</property>
-                <property name="vscrollbar_policy">always</property>
-                <child>
-                  <object class="GtkTextView" id="view">
-                    <property name="buffer">buffer</property>
-                    <property name="editable">True</property>
-                    <property name="left_margin">5</property>
-                    <property name="wrap_mode">word</property>
-                    <property name="cursor_visible">False</property>
-                  </object>
-                </child>
+              <object class="GtkTextView" id="view">
+                <property name="buffer">buffer</property>
+                <property name="editable">False</property>
+                <property name="left_margin">5</property>
+                <property name="wrap_mode">word</property>
+                <property name="cursor_visible">False</property>
               </object>
             </child>
           </object>

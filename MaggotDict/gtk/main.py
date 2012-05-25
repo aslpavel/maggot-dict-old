@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from gi.repository import Gtk
 
-from .resources import *
 from .card import *
+from .grid import *
+from .resources import *
 
 from ..pretzel.glib import *
 from ..pretzel.async import *
@@ -13,11 +14,10 @@ __all__ = ('MainWindow',)
 # Main Window                                                                  #
 #------------------------------------------------------------------------------#
 class MainWindow (object):
-    list_size = 30
     def __init__ (self, app, dct):
-        self.app     = app
-        self.dct     = dct
-        self.cards   = {}
+        self.app   = app
+        self.dct   = dct
+        self.cards = {}
 
         # build
         self.builder = Gtk.Builder ()
@@ -27,42 +27,40 @@ class MainWindow (object):
         settings_button = self.builder.get_object ('settings_button')
         settings_button.set_icon_widget (Gtk.Image.new_from_pixbuf (ResourceIcon ('cogs', 24)))
 
-        # word list
-        self.list_store = self.builder.get_object ('list_store')
-        self.list_map   = {index: self.list_store.append (('',)) for index in range (self.list_size)}
-        self.list_fill (self.dct_startswith (''))
-
-        # word list view
-        list_view = self.builder.get_object ('list_view')
-        def on_selection_changed (selection):
-            store, index = selection.get_selected ()
-            word = store [index][0]
-            word_entry.set_text (word)
-        GEvent (list_view.get_selection (), 'changed').Add (on_selection_changed)
-
-        # scroll
-        adjust              = self.builder.get_object ('list_adjust')
-        self.adjust_changed = Observable.FromEvent (GEvent (adjust, 'value-changed')).Throttle (self.app.Core, .25)
-        self.app.Watch (self.adjust_list (), 'scroll worker')
-
         # entry
-        word_entry = self.builder.get_object ('word_entry')
-        GEvent (word_entry, 'changed').Add (lambda s: self.list_fill (self.dct_startswith (s.get_text ())))
-        GEvent (word_entry, 'activate').Add (lambda s: app.Watch (self.show_card (s), 'show card'))
+        self.entry             = self.builder.get_object ('word_entry')
+        self.entry.set_can_default (True)
+        self.entry.grab_default ()
+        self.entry_changed     = Observable.FromEvent (GEvent (self.entry, 'changed')).Throttle (self.app.Core, .25)
+        self.entry_activate    = GEvent (self.entry, 'activate')
+        self.tranlate_clilcked = GEvent (self.builder.get_object ('translate_button'), 'clicked')
+
+        # grid
+        self.grid = Grid (app.Core, dct)
+        grid_box  = self.builder.get_object ('grid_box')
+        grid_box.pack_start (self.grid, True, True, 0)
 
         # window
         self.window  = self.builder.get_object ('main_window')
         self.window.show_all ()
+
+        # events
+        self.entry_activate    += lambda entry: self.ShowCard (self.entry.get_text ())
+        self.tranlate_clilcked += lambda button: self.ShowCard (self.entry.get_text ())
+        self.grid.OnActivated  += self.ShowCard
+        self.grid.OnSelected   += lambda word: self.entry.set_text (word)
         self.OnDelete = GEvent (self.window, 'delete-event')
 
-    #--------------------------------------------------------------------------#
-    # Private                                                                  #
-    #--------------------------------------------------------------------------#
-    @Async
-    def show_card (self, word_entry):
-        word = word_entry.get_text ()
-        self.app.Log.Info (word)
+        # workers
+        app.Watch (self.entry_changed_worker (), 'entry changed worker')
 
+    #--------------------------------------------------------------------------#
+    # Show Card                                                                #
+    #--------------------------------------------------------------------------#
+    def ShowCard (self, word):
+        self.app.Log.Debug ('show card: {}'.format (word))
+
+        # check if shown
         card = self.cards.get (word)
         if card is not None:
             card.window.present ()
@@ -70,31 +68,26 @@ class MainWindow (object):
 
         entry = self.dct.get (word)
         if entry is not None:
+            # create card
             card = Card (entry)
-            card.OnSound += lambda file: self.app.Log.Debug (file)
             self.cards [word] = card
-            yield card.OnDelete.Await ()
-            self.cards.pop (word)
 
+            # events
+            card.OnSound  += lambda file: self.app.Log.Debug (file)
+            card.OnDelete += lambda card, event: (self.cards.pop (word, None) and False)
+
+    #--------------------------------------------------------------------------#
+    # Workers                                                                  #
+    #--------------------------------------------------------------------------#
     @Async
-    def adjust_list (self):
+    def entry_changed_worker (self):
         while True:
-            adjust = (yield self.adjust_changed.Await ()) [0]
-            word   = self.dct.Scroll (adjust.get_value ()).Word
-            self.list_fill (entry.Word for entry in self.dct [word:])
+            yield self.entry_changed.Await ()
+            if self.entry.get_text () == self.grid.Selected:
+                continue
+            self.grid.Scroll (self.entry.get_text ())
 
-    def list_fill (self, source):
-        filled = 0
-        for itr, value in zip (self.list_map.values (), source):
-            filled += 1
-            self.list_store [itr] = (value,)
-        for index in range (filled, len (self.list_map)):
-            self.list_store [self.list_map [index]] = ('',)
-
-    def dct_startswith (self, text):
-        for entry in self.dct [text:]:
-            if not entry.Word.startswith (text):
-                break
-            yield entry.Word
-
+    #--------------------------------------------------------------------------#
+    # Private                                                                  #
+    #--------------------------------------------------------------------------#
 # vim: nu ft=python columns=120 :

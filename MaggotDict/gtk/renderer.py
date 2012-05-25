@@ -42,7 +42,7 @@ class GtkEntryRenderer (object):
         self.Sounds  = {}
 
         # resources
-        self.sound_icon  = ResourceIcon ('speaker', 12)
+        self.sound_icon  = ResourceIcon ('speaker', 10)
         self.link_icon   = ResourceIcon ('link', 10)
         self.hand_cursor = Gdk.Cursor (Gdk.CursorType.HAND1)
 

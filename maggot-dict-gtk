@@ -30,5 +30,5 @@ def Main (app):
 
 if __name__ == '__main__':
     # import gc; gc.disable ()
-    Application (Main, 'maggot-dict-gtk', core = GCore (), console = False)
+    Application (Main, 'maggot-dict-gtk', core = GCore (), console = True)
 # vim: nu ft=python columns=120 :
