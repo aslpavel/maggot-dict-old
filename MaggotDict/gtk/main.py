@@ -3,6 +3,8 @@ from gi.repository import Gtk
 
 from .card import *
 from .grid import *
+from .prefs import *
+from .built import *
 from .resources import *
 
 from ..pretzel.glib import *
@@ -13,40 +15,39 @@ __all__ = ('MainWindow',)
 #------------------------------------------------------------------------------#
 # Main Window                                                                  #
 #------------------------------------------------------------------------------#
-class MainWindow (object):
+class MainWindow (BuiltObject):
     def __init__ (self, app, dct):
+        BuiltObject.__init__ (self, 'main_window')
+
+        # props
         self.app   = app
         self.dct   = dct
         self.cards = {}
-
-        # build
-        self.builder = Gtk.Builder ()
-        self.builder.add_from_string (Resources ['main_window_ui'])
+        self.prefs = None
 
         # toolbar
-        settings_button = self.builder.get_object ('settings_button')
-        settings_button.set_icon_widget (Gtk.Image.new_from_pixbuf (ResourceIcon ('cogs', 24)))
+        self.prefs_button.set_icon_widget (Gtk.Image.new_from_pixbuf (ResourceIcon ('cogs', 24)))
+        self.prefs_clicked = GEvent (self.prefs_button, 'clicked')
+
 
         # entry
-        self.entry             = self.builder.get_object ('word_entry')
         self.entry.set_can_default (True)
         self.entry.grab_default ()
         self.entry_changed     = Observable.FromEvent (GEvent (self.entry, 'changed')).Throttle (self.app.Core, .25)
         self.entry_activate    = GEvent (self.entry, 'activate')
-        self.tranlate_clilcked = GEvent (self.builder.get_object ('translate_button'), 'clicked')
+        self.tranlate_clilcked = GEvent (self.translate_button, 'clicked')
 
         # grid
         self.grid = Grid (app.Core, dct)
-        grid_box  = self.builder.get_object ('grid_box')
-        grid_box.pack_start (self.grid, True, True, 0)
+        self.grid_box.pack_start (self.grid, True, True, 0)
 
         # window
-        self.window  = self.builder.get_object ('main_window')
         self.window.show_all ()
 
         # events
         self.entry_activate    += lambda entry: self.ShowCard (self.entry.get_text ())
         self.tranlate_clilcked += lambda button: self.ShowCard (self.entry.get_text ())
+        self.prefs_clicked    += lambda button: self.prefs_worker ().Traceback ('preferences worker')
         self.grid.OnActivated  += self.ShowCard
         self.grid.OnSelected   += lambda word: self.entry.set_text (word)
         self.OnDelete = GEvent (self.window, 'delete-event')
@@ -87,7 +88,15 @@ class MainWindow (object):
                 continue
             self.grid.Scroll (self.entry.get_text ())
 
-    #--------------------------------------------------------------------------#
-    # Private                                                                  #
-    #--------------------------------------------------------------------------#
+    @Async
+    def prefs_worker (self):
+        if self.prefs is not None:
+            self.prefs.window.present ()
+            return
+
+        self.prefs = Preferences (self.window)
+        try:
+            yield self.prefs.OnDelete.Await ()
+        finally:
+            self.prefs = None
 # vim: nu ft=python columns=120 :

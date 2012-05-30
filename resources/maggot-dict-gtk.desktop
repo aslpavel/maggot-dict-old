@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+
+Name=maggot-dict-gtk
+Comment=Maggot Dictionary
+
+Exec=maggot-dict-gtk
+TryExec=maggot-dict-gtk
+
+Categories=Office;
+Terminal=false
+Icon=gnome-dictionary
+Hidden=false
+StartupWMClass=Maggot-dict-gtk

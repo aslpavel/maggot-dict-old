@@ -10,7 +10,7 @@ Resources = {
 #------------------------------------------------------------------------------#
 'main_window_ui' : r"""<?xml version="1.0" encoding="UTF-8"?>
 <interface>
-  <object class="GtkWindow" id="main_window">
+  <object class="GtkWindow" id="window">
     <property name="title">maggot-dict</property>
     <property name="icon_name">gnome-dictionary</property>
     <child>
@@ -24,7 +24,7 @@ Resources = {
             <property name="show_arrow">False</property>
             <property name="icon_size">1</property>
             <child>
-              <object class="GtkToolButton" id="settings_button">
+              <object class="GtkToolButton" id="prefs_button">
                 <property name="stock-id">gtk-preferences</property>
               </object>
               <packing>
@@ -46,7 +46,7 @@ Resources = {
                 <child>
                   <object class="GtkBox" id="entry_box">
                     <child>
-                      <object class="GtkEntry" id="word_entry">
+                      <object class="GtkEntry" id="entry">
                       </object>
                       <packing>
                         <property name="expand">True</property>
@@ -94,6 +94,39 @@ Resources = {
     <property name="lower">0</property>
     <property name="upper">1</property>
     <property name="step-increment">1</property>
+  </object>
+</interface>
+""",
+#------------------------------------------------------------------------------#
+# Preferences Window                                                           #
+#------------------------------------------------------------------------------#
+'prefs_window_ui' : r"""<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkWindow" id="window">
+    <property name="width_request">300</property>
+    <property name="height_request">350</property>
+    <property name="title">maggot-dict preferences</property>
+    <child>
+      <object class="GtkBox" id="window_box">
+        <property name="orientation">vertical</property>
+        <property name="margin">12</property>
+        <property name="spacing">12</property>
+        <child>
+          <object class="GtkHButtonBox" id="button_box">
+            <property name="layout-style">end</property>
+            <child>
+              <object class="GtkButton" id="ok_button">
+                <property name="label">Ok</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="pack-type">end</property>
+          </packing>
+        </child>
+      </object>
+    </child>
   </object>
 </interface>
 """,

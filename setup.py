@@ -32,7 +32,8 @@ setup (
     # install
     packages     = find_packages (os.path.join (os.path.dirname (__file__), 'MaggotDict')),
     data_files   = [
-        ('bin', ['maggot-dict-cli']),
+        ('bin', ['maggot-dict-cli', 'maggot-dict-gtk']),
+        ('share/applications', ['resources/maggot-dict-gtk.desktop']),
         ('/etc/bash_completion.d', ['scripts/maggot-dict-cli']),
     ]
 )

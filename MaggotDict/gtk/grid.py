@@ -25,6 +25,7 @@ class Grid (Gtk.Box):
         self.scroll    = Gtk.Scrollbar (orientation = Gtk.Orientation.VERTICAL, adjustment  = self.adjust)
 
         # init
+        self.view.set_headers_visible (False)
         self.view.append_column (Gtk.TreeViewColumn ('Word', Gtk.CellRendererText (), text = 0))
         self.store_map = {index: self.store.append (('',)) for index in range (self.store_size)}
 
